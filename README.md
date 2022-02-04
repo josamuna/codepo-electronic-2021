@@ -140,10 +140,12 @@ La structure du projet reprend les dossiers et fichiers suivants détaillés dan
 1. En tant que sponsors prépondérant, l'[ULB (Université Libre de Bruxelles)-CODEPO (Cellule de Coopération au Développement de l'Ecole Polytechnique de Bruxelles)](https://polytech.ulb.be/fr/international/cellule-de-cooperation-au-developpement) au sein de la CODEPO assure la mise au point de ce module électronique.
 
 [![ULB](https://user-images.githubusercontent.com/15903230/74433560-4c7cc780-4e69-11ea-8c20-62a458ae1ffb.png)](https://polytech.ulb.be/fr/international/cellule-de-cooperation-au-developpement)
-  2. Comme financier, l'[ARES(Académie de Recherche et d'Enseignement Supérieur)](https://www.ares-ac.be/fr/) finance bon nombre des activités du projet. ***Il est le bailleur de fond numéro 1***. Néanmoins, l'***ULB*** en tant qu'Institution d'implémentation de la solution, en assure les financements subsidiaires et fournit sa main d'oeuvre (Encadrants, Experts et étudiants).
-  3. Pour sa par prépondérante dans la collaboration, l'[ISIG (Institut Supérieur d'Informatique et de Gestion de Goma)](https://www.isig.ac.cd/) assure la mise en place de la plateforme logiciel devant communiquer avec le module électronique.
+
+2. Comme financier, l'[ARES(Académie de Recherche et d'Enseignement Supérieur)](https://www.ares-ac.be/fr/) finance bon nombre des activités du projet. ***Il est le bailleur de fond numéro 1***. Néanmoins, l'***ULB*** en tant qu'Institution d'implémentation de la solution, en assure les financements subsidiaires et fournit sa main d'oeuvre (Encadrants, Experts et étudiants).
+
+3. Pour sa par prépondérante dans la collaboration, l'[ISIG (Institut Supérieur d'Informatique et de Gestion de Goma)](https://www.isig.ac.cd/) assure la mise en place de la plateforme logiciel devant communiquer avec le module électronique.
   
-  [![ISIG Goma](https://user-images.githubusercontent.com/15903230/74431114-f7d84d00-4e66-11ea-9b20-d3db26e0db89.png)](https://www.isig.ac.cd/)
+[![ISIG Goma](https://user-images.githubusercontent.com/15903230/74431114-f7d84d00-4e66-11ea-9b20-d3db26e0db89.png)](https://www.isig.ac.cd/)
 
 ### Contributeurs
 
