@@ -116,11 +116,11 @@ La structure du projet reprend les dossiers et fichiers suivants détaillés dan
 - `..\README.md` le fichier contenant la documentation du projet.
 - `..\thingstream.c` est le fichier contenant les différentes fonctions qui permettent d'envoyer des commandes au module de communication Thingstream Click via l'UART afin de, par exemple, se connecter au reseau, recevoir des messages, en envoyer, etc.
 - `..\thingstream.h` est le header du fichier thingstream.c
-- `..\uart1.c` est le fichier qui permet la communication UART (communication entre le micro-controleur et le module de communication Thingstream Click)
+- `..\uart1.c` est le fichier qui permet la communication UART via 2 pattes (TX et RX) du micro-controleur (communication entre le micro-controleur et le module de communication Thingstream Click)
 - `..\uart1.h` est le header du ficier uart1.c
 - `..\uart1.dump` ...............
-- `..\uart2.c` ...............
-- `..\uart2.h` ...............
+- `..\uart2.c`  est le fichier qui permet la communication UART via 2 autres pattes (TX et RX) du micro-controleur
+- `..\uart2.h` est le header du fichier uart2.c
 - `..\adc.c` ...............
 
 ### Utilisation des commandes AT et Thingstream
