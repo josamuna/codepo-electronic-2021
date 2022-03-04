@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name "click-board")(type "Legacy")(uri "${KIPRJMOD}/libs/click-board.lib")(options "")(descr ""))
+  (lib (name "DSP_Microchip_DSPIC33")(type "Legacy")(uri "${KIPRJMOD}/libs/DSP_Microchip_DSPIC33.lib")(options "")(descr ""))
+)

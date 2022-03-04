@@ -28,7 +28,9 @@
 
 ### Schémas électroniques et PCB
 
-***
+Le [schéma global](hardware/MSF-Battery-monitor.pdf) est disponible dans le dossier [*hardware*](hardware).
+
+Il peut être divisé en
 
 ### Outils de developpement du code source
 

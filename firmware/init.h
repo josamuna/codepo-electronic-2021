@@ -6,20 +6,22 @@
 
 #ifndef INIT_H
 #define	INIT_H
+#include <xc.h>
+
+    //* CPU cycle frequency. Mandatory to use __delay_ms() or __delay_us())
+    #define FCY (3685000ul)
+
+    //* Timeout to stop waiting Thingstream-click response to an AT command, in ticks
+    #define TS_TIMEOUT  (100*FCY)     // 1 second
+
 
     #define U1TX_PPS_ID     (3)
-    #define U2TX_PPS_ID     (5)
-
-    //#define SENSORS_ON               LATBbits.LATB7 //CANDIDATE FOR SUPPRESSION
-    //#define SENSORS_ON_TRIS          TRISBbits.TRISB7   //CANDIDATE FOR SUPPRESSION
 
     #define THINGSTREAM_ON          LATBbits.LATB10
     #define THINGSTREAM_ON_TRIS     TRISBbits.TRISB10
 
-    
-    //* CPU cycle frequency. Mandatory to use __delay_ms() or __delay_us())
-    #define FCY (3685000ul)
-
+    #define LED_ON() _LATB11 = 1;
+    #define LED_OFF() _LATB11 = 0;
 
     /**
      * Configures the I/O pins for the connected peripherals and to minimse
@@ -27,12 +29,8 @@
      */
     void pinInit(void);
     
-    //#define SENSORS_POWER_ON()        SENSORS_ON_TRIS=0; //CANDIDATE FOR SUPPRESSION
-    //#define SENSORS_POWER_DOWN()       SENSORS_ON_TRIS=1; //CANDIDATE FOR SUPPRESSION
     #define THINGSTREAM_POWER_ON()    THINGSTREAM_ON_TRIS=0;
     #define THINGSTREAM_POWER_DOWN()   THINGSTREAM_ON_TRIS=1;
-    
-
 
 
 #endif	/* INIT_H */

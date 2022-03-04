@@ -50,3 +50,21 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# firmware files
+firmware/build/
+firmware/dist/
+firmware/nbproject/private/
+firmware/nbproject/Package-*.bash
+firmware/nbproject/Makefile-default.mk
+firmware/nbproject/Makefile-genesis.properties
+firmware/nbproject/Makefile-impl.mk
+firmware/nbproject/Makefile-local-default.mk
+firmware/nbproject/Makefile-variables.mk
+firmware/.generated_files/
+
+# hardware files
+hardware/fp-info-cache
+hardware/*.kicad_prl
+
+hardware/MSF-Battery-monitor.pdf
