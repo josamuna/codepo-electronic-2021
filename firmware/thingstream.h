@@ -24,6 +24,19 @@ typedef enum {
     RESPONSE_ERROR = 3
 } tsError_t;
 
+#define LATITUDE_LENGTH 10
+#define LONGITUDE_LENGTH 10
+typedef struct {
+    char latitude[LATITUDE_LENGTH];
+    char longitude[LONGITUDE_LENGTH];
+} gpsCoord_t;
+
+typedef enum {
+    BAT_GPS = 1,
+    BAT = 2,
+    ECONOMY = 3,
+    CALIBRATION = 4
+} workMode_t;
 
 tsError_t tsCreate(void);
 tsError_t tsDestroy(void);
@@ -33,8 +46,8 @@ tsError_t tsSubscribe(char *topic);
 tsError_t tsUnsubscribe(void);
 tsError_t tsGNSSpowerOn(void);
 tsError_t tsGNSSpowerOff(void);
-tsError_t tsGNSSCmd(void);
-tsError_t tsPublish(char *topic, char *caseId, double soc, double autonomy, char *latitude, char *longitude, int16_t mode, int16_t intervalBatSec, int16_t intervalSendingHour, int16_t boolAlertPercentage);
+tsError_t tsGNSSCmd(gpsCoord_t* gpsCoord);
+tsError_t tsPublish(char *topic, char *caseId, uint8_t soc, double autonomy, gpsCoord_t coord, workMode_t mode, int16_t intervalBatSec, int16_t intervalSendingHour, int16_t boolAlertPercentage);
 tsError_t tsInfo(char* response, int16_t length);
 
 // LOW_LEVEL FUNCTIONS PROTOTYPES
@@ -43,6 +56,7 @@ void tsFlushRx(void);
 tsError_t tsSendInstruction(char cmd[], int16_t cmd_length, char* response, int16_t responseLength);
 tsError_t tsReceiveMsg(char* response, int16_t responseLength);
 tsError_t tsCheckResponse(char* response, char* expectedResponse, int16_t length);
+tsError_t gpsGetCoord(gpsCoord_t* gpsCoord, char* response);
 
 /*
 void write_string(char *dest, char text[]);

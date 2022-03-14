@@ -68,3 +68,5 @@ hardware/fp-info-cache
 hardware/*.kicad_prl
 
 hardware/MSF-Battery-monitor.pdf
+
+*.pdf

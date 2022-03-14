@@ -158,19 +158,18 @@ tsError_t tsGNSSpowerOn(void) {
 
 #define GNSS_CMD_LENGTH 14
 char GNSSCmd[GNSS_CMD_LENGTH] = "AT+IOTCGNSINF\n";
-#define GNSS_CMD_RESPONSE_LENGTH 18
-char GNSSCmdSuccessResponse[GNSS_CMD_RESPONSE_LENGTH] = "+IOTCGNSINF: 1,1";
+#define GNSS_CMD_RESPONSE_LENGTH 150
+//char GNSSCmdSuccessResponse[GNSS_CMD_RESPONSE_LENGTH] = "+IOTCGNSINF: 1,1";
 
-tsError_t tsGNSSCmd(void) {
+tsError_t tsGNSSCmd(gpsCoord_t* gpsCoord) {
     char response[GNSS_CMD_RESPONSE_LENGTH];
     tsError_t error;
     
     error = tsSendInstruction(GNSSCmd, GNSS_CMD_LENGTH, response, GNSS_CMD_RESPONSE_LENGTH);
-    
-    if (error == NO_ERROR) {
-        error = tsCheckResponse(response, GNSSCmdSuccessResponse, GNSS_CMD_RESPONSE_LENGTH);
+    if (error ==  NO_ERROR) {
+        error = gpsGetCoord(gpsCoord, response);
     }
-    
+   
     return (error);
 }
 
@@ -199,18 +198,18 @@ tsError_t tsGNSSpowerOff(void) {
 #define PUBLISH_RESPONSE_LENGTH 22
 char publishSuccessResponse[PUBLISH_RESPONSE_LENGTH] = "+IOTPUBLISH: SUCCESS\r\n";
 
-tsError_t tsPublish(char *topic, char *caseId, double soc, double autonomy, char *latitude, char *longitude, int16_t mode, int16_t intervalBatSec, int16_t intervalSendingHour, int16_t boolAlertPercentage) {
+tsError_t tsPublish(char *topic, char *caseId, uint8_t soc, double autonomy, gpsCoord_t coord, workMode_t mode, int16_t intervalBatSec, int16_t intervalSendingHour, int16_t boolAlertPercentage) {
     char response[UNSUBSCRIBE_RESPONSE_LENGTH];
     tsError_t error;
     int16_t length;
     char publishCmd[250];
 
-    if (mode == 1) {
-        length = sprintf(publishCmd, "AT+IOTPUBLISH=\"%s\",1,\"{&caseid&: %s, &SOC&: %.2f, &autonomy&: %.2f, &latitude&: hidden, &longitude&: hidden, &mode&: %d, &interval_bat_s&: %d, &interval_sending_h&: %d, &alert_battery&: %d}\",true\n",
+    if (mode == BAT) {
+        length = sprintf(publishCmd, "AT+IOTPUBLISH=\"%s\",1,\"{&caseid&: %s, &SOC&: %i, &autonomy&: %.2f, &latitude&: hidden, &longitude&: hidden, &mode&: %d, &interval_bat_s&: %d, &interval_sending_h&: %d, &alert_battery&: %d}\",true\n",
                                  topic, caseId, soc, autonomy, mode, intervalBatSec, intervalSendingHour, boolAlertPercentage);
-    } else if (mode == 2) {
-        length = sprintf(publishCmd, "AT+IOTPUBLISH=\"%s\",1,\"{&caseid&: %s, &SOC&: %.2f, &autonomy&: %.2f, &latitude&: %s, &longitude&: %s, &mode&: %d, &interval_bat_s&: %d, &interval_sending_h&: %d, &alert_battery&: %d}\",true\n",
-                                 topic, caseId, soc, autonomy, latitude, longitude, mode, intervalBatSec, intervalSendingHour, boolAlertPercentage);
+    } else if (mode == BAT_GPS) {
+        length = sprintf(publishCmd, "AT+IOTPUBLISH=\"%s\",1,\"{&caseid&: %s, &SOC&: %i, &autonomy&: %.2f, &latitude&: %s, &longitude&: %s, &mode&: %d, &interval_bat_s&: %d, &interval_sending_h&: %d, &alert_battery&: %d}\",true\n",
+                                 topic, caseId, soc, autonomy, coord.latitude, coord.longitude, mode, intervalBatSec, intervalSendingHour, boolAlertPercentage);
     }
     error = tsSendInstruction(publishCmd, length, response, PUBLISH_RESPONSE_LENGTH);
 
@@ -310,5 +309,64 @@ tsError_t tsCheckResponse(char* response, char* expectedResponse, int16_t length
         i++;
     }
     
+    return (error);
+}
+
+
+
+/* Used to extract a substring located between the indexes 'from' and 'to' from 'source' and store it into 'target'. */
+int getSubString(char *source, char *target, uint16_t from, uint16_t to) {
+    uint16_t length = 0;
+    uint16_t i = 0, j = 0;
+    
+    length = strlen(source);
+    if ( (from < length) && (to < length) ) {
+        for (i = from; i <= to; i++) {
+            target[j] = source[i];
+            j++;
+        }
+        target[j] = '\0';
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
+tsError_t gpsGetCoord(gpsCoord_t* gpsCoord, char* response) {
+    uint16_t i = 0, j = 0;
+    uint16_t idx[5];
+    char errStr[] = "200";
+    char tmpStr[50];
+    tsError_t error = NO_ERROR;
+    
+    if (response[15] == '1') {
+        while ( (response[i] != '\0') && (i < GNSS_CMD_RESPONSE_LENGTH) ) {
+            if (response[i] == ',') {
+                idx[j] = i;
+                j++;
+            }
+            i++;
+        }
+
+        if ( getSubString(response, tmpStr, idx[2] + 1, idx[3] - 1) ) {
+            strcpy(gpsCoord->longitude, tmpStr);
+        } else {
+            strcpy(gpsCoord->longitude, errStr);
+            error = RESPONSE_ERROR;
+        }
+        if ( getSubString(response, tmpStr, idx[3] + 1, idx[4] - 1) ) {
+            strcpy(gpsCoord->latitude, tmpStr);
+        } else {
+            strcpy(gpsCoord->latitude, errStr);
+            error = RESPONSE_ERROR;
+        }
+    }
+    else {
+        strcpy(gpsCoord->longitude, errStr);
+        strcpy(gpsCoord->latitude, errStr);
+        error = RESPONSE_ERROR;
+    }
+
     return (error);
 }

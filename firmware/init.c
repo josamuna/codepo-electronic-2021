@@ -20,7 +20,7 @@
 // FOSCSEL
 #pragma config FNOSC = FRC              // Oscillator Mode (Internal Fast RC (FRC))
 #pragma config IESO = OFF               // ###### Internal External Switch Over Mode (Start-up device with user-selected oscillator source)
-//#pragma config IESO = ON               // MODIFFFFFFFFFFFF
+
 // FOSC
 #pragma config POSCMD = NONE            // Primary Oscillator Source (Primary Oscillator Disabled)
 //#pragma config OSCIOFNC = ON            // ##### OSC2 Pin Function (OSC2 pin has digital I/O function)
@@ -32,8 +32,8 @@
 #pragma config WDTPOST = PS32768        // Watchdog Timer Postscaler (1:32,768)
 #pragma config WDTPRE = PR128           // WDT Prescaler (1:128)
 #pragma config WINDIS = OFF             // Watchdog Timer Window (Watchdog Timer in Non-Window mode)
-//#pragma config FWDTEN = ON              // ##### Watchdog Timer Enable (Watchdog timer always enabled)
-#pragma config FWDTEN = OFF 
+#pragma config FWDTEN = ON              // ##### Watchdog Timer Enable (Watchdog timer always enabled)
+// #pragma config FWDTEN = OFF 
 
 // FPOR
 #pragma config FPWRT = PWR128           // POR Timer Value (128ms)
