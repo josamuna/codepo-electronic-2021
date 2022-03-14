@@ -276,7 +276,7 @@ tsError_t tsReceiveMsg(char* response, int16_t responseLength) {
     i = 0;
     t0 = clock();
     // The thingstream module response should end with 0x0A character
-    while ( (c != 0x0A) && (error == NO_ERROR) ) { 
+    while ( (c != 0x0A) && (error != TIMEOUT_ERROR) ) { 
         // Wait for the next character of the response
         while( !uart1RxDataAvailable() && (error == NO_ERROR) ) {
             t1 = clock();
