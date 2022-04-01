@@ -55,18 +55,26 @@
 void pinInit(void) {    
     AD1PCFGL = 0xFFFF;  // all pins in digital
     _PCFG1 = 0; // to allow AN0 and AN1 to be read at the same time
+    LED_TRIS = 0;
+
+    // Thingstream click is connected to UART1
+#ifdef OLD_PROTO
     // Configure power switches PIO
     THINGSTREAM_ON_TRIS = 1;
     THINGSTREAM_ON = 0;
-
-    // Thingstream click is connected to UART1
+    // configure the click-board UART pins
     _TRISB14 = 1;
     _TRISB15 = 1;
     _RP15R = U1TX_PPS_ID;
     _U1RXR = 14;
-
-    //TRISB = 0x07FF;
-    //_TRISB14 = 1; // FIX TO BE ABLE TO HAVE BOTH THE BAT GAUGE AND THE COMMUNICATION OPERATIONAL
-    //_TRISB15 = 1; // FIX TO BE ABLE TO HAVE BOTH THE BAT GAUGE AND THE COMMUNICATION OPERATIONAL
-
+#else
+    // Configure power switches PIO
+    THINGSTREAM_ON_TRIS = 1;
+    THINGSTREAM_ON = 1;
+    // configure the click-board UART pins
+    _TRISB7 = 1;
+    _TRISB6 = 1;
+    _RP7R = U1TX_PPS_ID;
+    _U1RXR = 6;
+#endif
 }

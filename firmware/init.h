@@ -8,6 +8,8 @@
 #define	INIT_H
 #include <xc.h>
 
+    //#define OLD_PROTO
+
     //* CPU cycle frequency. Mandatory to use __delay_ms() or __delay_us())
     #define FCY (3685000ul)
 
@@ -20,8 +22,9 @@
     #define THINGSTREAM_ON          LATBbits.LATB10
     #define THINGSTREAM_ON_TRIS     TRISBbits.TRISB10
 
-    #define LED_ON() _LATB11 = 1;
-    #define LED_OFF() _LATB11 = 0;
+    #define LED_ON()    _LATB5 = 1;
+    #define LED_OFF()   _LATB5 = 0;
+    #define LED_TRIS    _TRISB5
 
     /**
      * Configures the I/O pins for the connected peripherals and to minimse

@@ -26,16 +26,22 @@
 //#include <ctype.h>
 
 
+#define COMM_PERIOD_H       4   //Période d'envoi des messages, en heure
+#define SLEEP_PERIOD_SEC    128 // Durée d'un "sleep", en secondes
+
 /* Defining the global variables */
-char publishTopic[9] = "DtW\0";
-char caseId[9] = "FICT8C79\0";
+char publishTopic0[] = "FICT8C79-DtW\0";
+char publishTopic1[] = "FICT8C80-DtW\0";
+char publishTopic2[] = "FICT8C81-DtW\0";
+char caseId0[9] = "FICT8C79\0";
+char caseId1[9] = "FICT8C80\0";
+char caseId2[9] = "FICT8C81\0";
+int16_t curTopic = 0;
 
 
 #define MSG_RECEIVED_LENGTH 50
 char receivedMsg[MSG_RECEIVED_LENGTH];
 
-#define GNSS_INFO_LENGTH 57
-char echo_GNSS[GNSS_INFO_LENGTH];
 #define LATITUDE_LENGTH 10
 #define LONGITUDE_LENGTH 10
 char latitude[LATITUDE_LENGTH];
@@ -43,6 +49,7 @@ char longitude[LONGITUDE_LENGTH];
 
 /* Parametric variables (can be modified via the web platform by sending a specific value in the payload of a message sent to this device) */
 workMode_t workMode = BAT_GPS;
+//workMode_t workMode = BAT;
 
 /* Ranges of values that those parametric variables can take */
 int mode_lower_bound = 1, mode_upper_bound = 3;
@@ -53,20 +60,13 @@ int interval_sending_h_lower_bound = 1, interval_sending_h_upper_bound = 168;
 int16_t bool_alert_percentage = 0;
 float last_percentage = 100;
 uint8_t percentage = 100;
-float voltage_out = 0;
-float current_out = 0;
-float voltage_in = 0;
-float current_in = 0;
-float resistance_out = 0.04436;
-float resistance_in = 0.04436;
 float total_capacity = 26800; //number of mAh in the zendure battery (fully charged)
+// Cpacité de la batterie, en mAh
 float gauge = 26800; // The battery is fully charged
-float gain_in = 45; // amplification ==> diviser dans les courants
-float gain_out = 15; // amplification ==> diviser dans les courants
 float avg_current_out = 3;
 float autonomy = 0;
 
-void batGaugeFunction(void);
+void batGaugeFunction(uint16_t batSleepCount);
 void awakeFunction(void);
 void delaySec(int time);
 void write_string(char *dest, char text[]);
@@ -88,13 +88,14 @@ typedef enum {
     ERROR
 } fsmState_t;
 
+
 /* Main function: implemented as a finite state machine*/
 int main(void) {
     fsmState_t fsmState;
     tsError_t tsError;
     // periods are counted in sleep cycles, determined by the watchdog.  sleep cycle is 128 sec
     uint16_t batSleepThreshold = 1; // number of sleep cycle between measures
-    uint16_t commSleepThreshold = 28*4; // number of sleep cycle between messages (1h = 28 cycles)
+    uint16_t commSleepThreshold = (COMM_PERIOD_H * 3600) / SLEEP_PERIOD_SEC; // number of sleep cycle between messages (1h = 28 cycles)
     // sleep cycle counters, initialised to their threshold for immediate action
     uint16_t batSleepCount = batSleepThreshold;
     uint16_t commSleepCount = commSleepThreshold;//sendingSleepThreshold;
@@ -110,12 +111,13 @@ int main(void) {
 
     /* Switching the LED on for a few seconds to alert the user that the program is starting */
     LED_ON();
-    //delay_sec(7); 
+    __delay_ms(1000); 
     LED_OFF();
 
     /* Starting the finite state machine by entering the AWAKE state */
     fsmState = SLEEPING;
-    percentage = 43;
+    percentage = 10;
+    
 
     while (1) {
         switch (fsmState) {
@@ -129,10 +131,9 @@ int main(void) {
             case SLEEPING:
                 // transitions
                 if (batSleepCount >= batSleepThreshold) {
-                    batSleepCount = 0;
                     fsmState = MEASURE;
-                } else if (commSleepCount >= commSleepThreshold) {
-                    commSleepCount = 0;
+                }
+                else if (commSleepCount >= commSleepThreshold) {
                     fsmState = ESTABLISHCONNECTION;
                 }
                 else {
@@ -144,9 +145,9 @@ int main(void) {
                 break;
 
             case MEASURE:
-                batGaugeFunction();
-                    if (commSleepCount >= commSleepThreshold) {
-                    commSleepCount = 0;
+                batGaugeFunction(batSleepCount);
+                batSleepCount = 0;
+                if (commSleepCount >= commSleepThreshold) {
                     fsmState = ESTABLISHCONNECTION;
                 }
                 else {
@@ -173,15 +174,16 @@ int main(void) {
             case LISTENING:
                 /* Listening for messages sent by the server to this device. A message can only be received 
                   once subscribed to the topic the message was posted on */
-                /*                tsError = tsSubscribe(caseId);
-                                if (tsError == NO_ERROR) {
-                                    tsError = tsReceiveMsg(receivedMsg, MSG_RECEIVED_LENGTH);
-                                    if (tsError == NO_ERROR) {
-                                        extract_data_msg(receivedMsg); // extraction of the relevant data
-                                    }
-                                }
-                                tsError = tsUnsubscribe();
-                 */
+/*                tsError = tsSubscribe(caseId);
+                if (tsError == NO_ERROR) {
+                    tsError = tsReceiveMsg(receivedMsg, MSG_RECEIVED_LENGTH);
+                    if (tsError == NO_ERROR) {
+                        dummy = 41;
+                        //extract_data_msg(receivedMsg); // extraction of the relevant data
+                    }
+                }
+                tsError = tsUnsubscribe();
+*/
                 if (tsError != NO_ERROR) {
                     fsmState = ERROR;
                 }
@@ -195,8 +197,21 @@ int main(void) {
                 break;
 
             case SENDING:
-                tsError = tsPublish(publishTopic, caseId, percentage, autonomy, gpsCoord, workMode, 2, 5, bool_alert_percentage);
+                curTopic = 0;
+                if (curTopic == 0) {
+                    tsError = tsPublish(publishTopic0, caseId0, percentage, autonomy, gpsCoord, workMode, batSleepThreshold*SLEEP_PERIOD_SEC, COMM_PERIOD_H, bool_alert_percentage);
+                    curTopic++;
+                } else if (curTopic == 1) {
+                    tsError = tsPublish(publishTopic1, caseId1, percentage, autonomy, gpsCoord, workMode, 2, 5, bool_alert_percentage);
+                    curTopic++;
+                } else {
+                    tsError = tsPublish(publishTopic2, caseId2, percentage, autonomy, gpsCoord, workMode, 2, 5, bool_alert_percentage);
+                    curTopic = 0;
+                }
                 percentage++;
+                if (percentage > 99) {
+                    percentage = 10;
+                }
 
                 if (tsError == NO_ERROR) {
                     fsmState = DESTROY_CONNECTION;
@@ -213,8 +228,8 @@ int main(void) {
                 tsError = tsDestroy();
                 THINGSTREAM_UART_DISABLE(); // SWITCHING OF THE UART CHANNEL
                 THINGSTREAM_POWER_DOWN(); // SWITCHING OFF THE COMMUNICATION MODULE
-                // bool_alert_percentage = 0;
-
+                bool_alert_percentage = 0;
+                commSleepCount = 0;
                 fsmState = SLEEPING;
                 break;
 
@@ -242,7 +257,7 @@ int main(void) {
                         fsmState = SENDING;
                     } else {
                         Sleep();
-                        batGaugeFunction();
+                        batGaugeFunction(batSleepCount);
                         batSleepCount = 0;
                         commSleepCount++;
                     }
@@ -257,31 +272,37 @@ int main(void) {
     return (0);
 }
 
-void batGaugeFunction(void) {
-    autonomy += 1;
-/*    // Starting conversion for pin AN1
-    adcStart(1);
+
+#define LOAD_GAIN       (51*0.033)  // La résistance de mesure vaut 33mOhm et l'amplificatuer différentiel a un gain de 51
+#define CHARGE_GAIN     (15*0.033)  // La résistance de mesure vaut 33mOhm et l'amplificatuer différentiel a un gain de 15
+#define CHARGE_CHANNEL  0           // la mesure de Iload se fait sur AN0
+#define LOAD_CHANNEL    1           // la mesure de Iload se fait sur AN1
+
+void batGaugeFunction(uint16_t batSleepCount) {
+    float loadCurrent;
+    float chargeCurrent;
+    
+    // Mesure de Iload
+    adcStart(LOAD_CHANNEL);
     //Waiting for the conversion to be done
     while (!adcConversionDone());
     // Reading
-    voltage_out = (3.3 * adcRead()) / gain_out / 1023;
-    current_out = voltage_out / resistance_out;
+    loadCurrent = LOAD_GAIN * (3.3/1023) * adcRead();
 
-    // Starting conversion for pin AN0
-    adcStart(0);
+    // SMesrue de Icharge
+    adcStart(CHARGE_CHANNEL);
     //Waiting for the conversion to be done
-    while (!adcConversionDone()) {
-    }
-    voltage_in = (3.3 * adcRead()) / gain_in / 1023;
-    current_in = voltage_in / resistance_in;
+    while (!adcConversionDone());
+    chargeCurrent = CHARGE_GAIN * (3.3/1023) * adcRead();
 
     // Computing the percentage
-//    gauge = gauge - (current_out * 1000)*(dt_bat / 3600) + (current_in * 1000)*(dt_bat / 3600);
+    // La tension de charge est 7V, on applique donc un facteur 7V/5V au courant de charge
+    gauge = gauge + (chargeCurrent*3.5 - loadCurrent) * (batSleepCount * SLEEP_PERIOD_SEC) / 3.6;
     last_percentage = percentage;
     percentage = 100 * (gauge / total_capacity);
 
     // Computing the remaining autonomy
-    avg_current_out = (avg_current_out + current_out) / 2;
+    avg_current_out = (avg_current_out + loadCurrent) / 2;
     autonomy = gauge / (avg_current_out * 1000);
 
     if (percentage <= 75 && last_percentage > 75) {
@@ -295,7 +316,7 @@ void batGaugeFunction(void) {
     }
     if (percentage <= 5 && last_percentage > 5) {
         bool_alert_percentage = 1;
-    }*/
+    }
 }
 
 /* Wait function (in seconds) */
