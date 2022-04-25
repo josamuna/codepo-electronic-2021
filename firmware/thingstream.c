@@ -3,15 +3,8 @@
 #include "thingstream.h"
 #include "uart1.h"
 
-#include <libq.h>
-#include <dsp.h>
-
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <math.h>
-#include <float.h> 
-#include <stdbool.h>
 #include <time.h>
 #include <ctype.h>
 
@@ -198,18 +191,18 @@ tsError_t tsGNSSpowerOff(void) {
 #define PUBLISH_RESPONSE_LENGTH 22
 char publishSuccessResponse[PUBLISH_RESPONSE_LENGTH] = "+IOTPUBLISH: SUCCESS\r\n";
 
-tsError_t tsPublish(char *topic, char *caseId, uint8_t soc, double autonomy, gpsCoord_t coord, workMode_t mode, int16_t intervalBatSec, int16_t intervalSendingHour, int16_t boolAlertPercentage) {
+tsError_t tsPublish(char *topic, char *caseId, double energyIn, double energyOut, gpsCoord_t coord, workMode_t mode, int16_t intervalBatSec, int16_t intervalSendingHour, double temperature) {
     char response[UNSUBSCRIBE_RESPONSE_LENGTH];
     tsError_t error;
     int16_t length;
     char publishCmd[250];
 
     if (mode == BAT) {
-        length = sprintf(publishCmd, "AT+IOTPUBLISH=\"%s\",1,\"{&caseid&: %s, &SOC&: %i, &autonomy&: %.2f, &latitude&: hidden, &longitude&: hidden, &mode&: %d, &interval_bat_s&: %d, &interval_sending_h&: %d, &alert_battery&: %d}\",true\n",
-                                 topic, caseId, soc, autonomy, mode, intervalBatSec, intervalSendingHour, boolAlertPercentage);
+        length = sprintf(publishCmd, "AT+IOTPUBLISH=\"%s\",1,\"{&caseid&: %s, &IN&: %.2f, &OUT&: %.2f, &latitude&: hidden, &longitude&: hidden, &mode&: %d, &interval_bat_s&: %d, &interval_sending_h&: %d, &temp&: %.2f}\",true\n",
+                                 topic, caseId, energyIn, energyOut, mode, intervalBatSec, intervalSendingHour, temperature);
     } else if (mode == BAT_GPS) {
-        length = sprintf(publishCmd, "AT+IOTPUBLISH=\"%s\",1,\"{&caseid&: %s, &SOC&: %i, &autonomy&: %.2f, &latitude&: %s, &longitude&: %s, &mode&: %d, &interval_bat_s&: %d, &interval_sending_h&: %d, &alert_battery&: %d}\",true\n",
-                                 topic, caseId, soc, autonomy, coord.latitude, coord.longitude, mode, intervalBatSec, intervalSendingHour, boolAlertPercentage);
+        length = sprintf(publishCmd, "AT+IOTPUBLISH=\"%s\",1,\"{&caseid&: %s, &IN&: %.2f, &OUT&: %.2f, &latitude&: %s, &longitude&: %s, &mode&: %d, &interval_bat_s&: %d, &interval_sending_h&: %d, &temp&: %.2f}\",true\n",
+                                 topic, caseId, energyIn, energyOut, coord.latitude, coord.longitude, mode, intervalBatSec, intervalSendingHour, temperature);
     }
     error = tsSendInstruction(publishCmd, length, response, PUBLISH_RESPONSE_LENGTH);
 

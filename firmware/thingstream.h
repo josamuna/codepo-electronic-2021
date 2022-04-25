@@ -47,7 +47,7 @@ tsError_t tsUnsubscribe(void);
 tsError_t tsGNSSpowerOn(void);
 tsError_t tsGNSSpowerOff(void);
 tsError_t tsGNSSCmd(gpsCoord_t* gpsCoord);
-tsError_t tsPublish(char *topic, char *caseId, uint8_t soc, double autonomy, gpsCoord_t coord, workMode_t mode, int16_t intervalBatSec, int16_t intervalSendingHour, int16_t boolAlertPercentage);
+tsError_t tsPublish(char *topic, char *caseId, double energyIn, double energyOut, gpsCoord_t coord, workMode_t mode, int16_t intervalBatSec, int16_t intervalSendingHour, double temperature);
 tsError_t tsInfo(char* response, int16_t length);
 
 // LOW_LEVEL FUNCTIONS PROTOTYPES
