@@ -28,13 +28,6 @@
 #pragma config IOL1WAY = ON             // Peripheral Pin Select Configuration (Allow Only One Re-configuration)
 #pragma config FCKSM = CSDCMD           // Clock Switching and Monitor (Both Clock Switching and Fail-Safe Clock Monitor are disabled)
 
-// FWDT
-#pragma config WDTPOST = PS32768        // Watchdog Timer Postscaler (1:32,768)
-#pragma config WDTPRE = PR128           // WDT Prescaler (1:128)
-#pragma config WINDIS = OFF             // Watchdog Timer Window (Watchdog Timer in Non-Window mode)
-#pragma config FWDTEN = ON              // ##### Watchdog Timer Enable (Watchdog timer always enabled)
-// #pragma config FWDTEN = OFF 
-
 // FPOR
 #pragma config FPWRT = PWR128           // POR Timer Value (128ms)
 #pragma config ALTI2C = OFF             // Alternate I2C  pins (I2C mapped to SDA1/SCL1 pins)
