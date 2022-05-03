@@ -18,7 +18,8 @@
 #pragma config GSS = OFF                // General Segment Code Protection (User program memory is not code-protected)
 
 // FOSCSEL
-#pragma config FNOSC = FRC              // Oscillator Mode (Internal Fast RC (FRC))
+#pragma config FNOSC = FRCDIV16         // Oscillator Mode (Internal Fast RC (FRC) divide by 16)
+//#pragma config FNOSC = FRC              // Oscillator Mode (Internal Fast RC (FRC))
 #pragma config IESO = OFF               // ###### Internal External Switch Over Mode (Start-up device with user-selected oscillator source)
 
 // FOSC
@@ -38,6 +39,12 @@
 // FICD
 #pragma config ICS = PGD1               // Comm Channel Select (Communicate on PGC1/EMUC1 and PGD1/EMUD1)
 #pragma config JTAGEN = OFF             // JTAG Port Enable (JTAG is Disabled)
+
+// FWDT
+#pragma config WDTPOST = PS32768        // Watchdog Timer Postscaler (1:32,768)
+#pragma config WDTPRE = PR128           // WDT Prescaler (1:128)
+#pragma config WINDIS = OFF             // Watchdog Timer Window (Watchdog Timer in Non-Window mode)
+#pragma config FWDTEN = ON              // ##### Watchdog Timer Enable (Watchdog timer always enabled)
 
 // #pragma config statements should precede project file includes.
 // Use project enums instead of #define for ON and OFF.

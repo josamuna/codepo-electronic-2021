@@ -11,8 +11,8 @@
     //#define OLD_PROTO
 
     //* CPU cycle frequency. Mandatory to use __delay_ms() or __delay_us())
-    #define FCY (3685000ul)
-
+    //#define FCY (3685000ul)
+    #define FCY (230312ul)
     //* Timeout to stop waiting Thingstream-click response to an AT command, in ticks
     #define TS_TIMEOUT  (100*FCY)     // 1 second
 
@@ -25,6 +25,7 @@
     #define LED_ON()    _LATB5 = 1;
     #define LED_OFF()   _LATB5 = 0;
     #define LED_TRIS    _TRISB5
+    #define LED         _LATB5
 
     /**
      * Configures the I/O pins for the connected peripherals and to minimse

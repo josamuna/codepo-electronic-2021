@@ -18,27 +18,40 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <p33FJ128MC802.h>
 
 
-// FWDT
-#pragma config WDTPOST = PS1024        // Watchdog Timer Postscaler (1:32,768)
-#pragma config WDTPRE = PR128           // WDT Prescaler (1:128)
-#pragma config WINDIS = OFF             // Watchdog Timer Window (Watchdog Timer in Non-Window mode)
-#pragma config FWDTEN = ON              // ##### Watchdog Timer Enable (Watchdog timer always enabled)
+/* Le µC est mis en IDLE pendant 4 secondes pour économiser l'énergie
+ * La LED est allumée pendant 0.5s pour garder le powerPack actif
+ * C'est la durée minimum expérimentale (250ms ne marche pas)
+ * La durée max pour le powerpack est 13s
+ * Le mode IDLE est nécessaire pour que le timer1 reste actif
+ * 
+ * on utilise FRC/16 comme horloge pour limiter la consommation et atteindre
+ * des durées plus longue ave le timer1
+ */
+
+void __attribute__((interrupt, auto_psv)) _T1Interrupt( void ) {
+    _T1IF = 0;
+    LED_ON();
+}
 
 
 /* Main function: implemented as a finite state machine*/
 int main(void) {
-
+    T1CONbits.TCKPS = 2;    // PS = 1:256
+    PR1 = 35985;//14394;            // PR = FCY*T/PS - 1 = 230312Hz*4s/256 - 1
+    _T1IF = 0;
+    _T1IE = 1;
+    T1CONbits.TON = 1;
+    
     /* Serial & Pins Setup */
     pinInit();
 
     while (1) {
-        LED_ON();
-        __delay_ms(904); 
+        Idle();
+        __delay_ms(500);
         LED_OFF();
-        //__delay_ms(1000); 
-        Sleep();
     }
     return (0);
 }
