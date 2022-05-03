@@ -18,60 +18,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#include <math.h>
-//#include <float.h> 
-//#include <libq.h>
-//#include <dsp.h>
-//#include <stdbool.h>
-//#include <ctype.h>
 
 
-#define COMM_PERIOD_H       4   //Période d'envoi des messages, en heure
-#define SLEEP_PERIOD_SEC    128 // Durée d'un "sleep", en secondes
 
-/* Defining the global variables */
+#define COMM_PERIOD_H       4                       // Période d'envoi des messages, en heures
+#define TIMER1_PERIOD_S     10                      // Durée d'un "sleep", en secondes
+#define GPS_MAX_TRY         (120/TIMER1_PERIOD_S)   // max duration fot trying to get GPS coordinates
+uint16_t commSleepThreshold = (COMM_PERIOD_H * 3600ul) / TIMER1_PERIOD_S;    // number of timer1 period between messages
+
+// MQTT topics
 char publishTopic[] = "DtW\0";
-char publishTopic1[] = "FICT8C80-DtW\0";
-char publishTopic2[] = "FICT8C81-DtW\0";
 char caseId[9] = "FICT8C79\0";
-char caseId1[9] = "FICT8C80\0";
-char caseId2[9] = "FICT8C81\0";
-int16_t curTopic = 0;
+/* Send the µC in sleep mode, then after wake-up, update the measurements*/
+void sleepFunction(void);
 
-
-#define MSG_RECEIVED_LENGTH 50
-char receivedMsg[MSG_RECEIVED_LENGTH];
-
-#define LATITUDE_LENGTH 10
-#define LONGITUDE_LENGTH 10
-char latitude[LATITUDE_LENGTH];
-char longitude[LONGITUDE_LENGTH];
-// Energies entrées et sorties de la batterie depuis le dernier message envoyé
-float energyIn  = 1.2;
-float energyOut = 0.3;
-// Parametric variables (can be modified via the web platform by sending a specific value in the payload of a message sent to this device)
-//workMode_t workMode = BAT_GPS;
-workMode_t workMode = BAT;
-// temperature in the case
-float temperature = 20.22;
-
-/* Ranges of values that those parametric variables can take */
-int mode_lower_bound = 1, mode_upper_bound = 3;
-int interval_bat_s_lower_bound = 1, interval_bat_s_upper_bound = 60;
-int interval_sending_h_lower_bound = 1, interval_sending_h_upper_bound = 168;
-
-/* Variables for the battery monitoring */
-int16_t bool_alert_percentage = 0;
-float last_percentage = 100;
-
-float total_capacity = 26800; //number of mAh in the zendure battery (fully charged)
-// Cpacité de la batterie, en mAh
-float gauge = 26800; // The battery is fully charged
-float avg_current_out = 3;
-
-void batGaugeFunction(uint16_t batSleepCount);
-void awakeFunction(void);
-void delaySec(int time);
 void write_string(char *dest, char text[]);
 int getSubString(char *source, char *target, int from, int to);
 void extract_relevant_data(char* relevant_data);
@@ -80,7 +40,7 @@ void extract_lat_long(char *lat, char *longi, char echo_gnss[]);
 
 /* Defining the different states of the finite state machine */
 typedef enum {
-    SLEEPING,
+    IDLE,
     MEASURE,
     ESTABLISHCONNECTION,
     LISTENING,
@@ -92,67 +52,81 @@ typedef enum {
 } fsmState_t;
 
 
+float isrChargeEnergy = 0;
+float isrLoadEnergy = 0;
+uint16_t isrCommSleepCount = 0;
+void __attribute__((interrupt, auto_psv)) _T1Interrupt( void ) {
+    float current;
+    float voltage;
+    
+    LED_ON();
+    // Mesure du courant
+    AD1CHS0bits.CH0SA = ICHARGE_CHANNEL; 
+    AD1CON1bits.SAMP = 0;
+    while (!AD1CON1bits.DONE);
+    AD1CON1bits.DONE = 0;
+    current = ICHARGE_GAIN * ADC1BUF0;
+    // Mesure de la tension
+    AD1CHS0bits.CH0SA = VCHARGE_CHANNEL;
+    while (!AD1CON1bits.DONE);
+    AD1CON1bits.DONE = 0;
+    voltage = VCHARGE_GAIN * ADC1BUF0;
+    isrChargeEnergy += voltage * current * TIMER1_PERIOD_S;
+
+    // Mesure du courant
+    AD1CHS0bits.CH0SA = ILOAD_CHANNEL; 
+    AD1CON1bits.SAMP = 0;
+    while (!AD1CON1bits.DONE);
+    AD1CON1bits.DONE = 0;
+    current = ILOAD_GAIN * ADC1BUF0;
+    // Mesure de la tension
+    AD1CHS0bits.CH0SA = VLOAD_CHANNEL;
+    while (!AD1CON1bits.DONE);
+    AD1CON1bits.DONE = 0;
+    voltage = VLOAD_GAIN * ADC1BUF0;
+    isrLoadEnergy += voltage * current * TIMER1_PERIOD_S;
+    
+    isrCommSleepCount++;
+}
+
+
 /* Main function: implemented as a finite state machine*/
 int main(void) {
     fsmState_t fsmState;
     tsError_t tsError;
-    // periods are counted in sleep cycles, determined by the watchdog.  sleep cycle is 128 sec
-    uint16_t batSleepThreshold = 1; // number of sleep cycle between measures
-    uint16_t commSleepThreshold = (COMM_PERIOD_H * 3600) / SLEEP_PERIOD_SEC; // number of sleep cycle between messages (1h = 28 cycles)
-    // sleep cycle counters, initialised to their threshold for immediate action
-    uint16_t batSleepCount = batSleepThreshold;
-    uint16_t commSleepCount = commSleepThreshold;//sendingSleepThreshold;
-    gpsCoord_t gpsCoord;
-    uint16_t gpsTry;
-    char errStr[] = "201";
+    float chargeEnergy, loadEnergy;     // Energy given by the charger/fed to the load since last message
+    gpsCoord_t gpsCoord;    // GPS coordinates, given by the click-board
+    char errStr[] = "201";      // Error code that will replace ths GPS coordinates if GPS initialisation of click-board fails
+    workMode_t workMode = BAT;  // Current work mode
+    float temperature = 20.22;  // temperature in the case
+    uint16_t gpsCount;
+
 
 
     /* Serial & Pins Setup */
     pinInit();
+    LED_ON();
     adcInit(ADC_MANUAL_SAMPLING); // Configuration de L'ADC pour un declenchement par adcStart())
     uart1Config(115200, FCY, UART_8N1_NO_HANDSHAKE);
 
-    /* Switching the LED on for a few seconds to alert the user that the program is starting */
-    LED_ON();
-    __delay_ms(1000); 
-    LED_OFF();
-
     /* Starting the finite state machine by entering the AWAKE state */
-    fsmState = SLEEPING;
+    fsmState = IDLE;
 
     while (1) {
         switch (fsmState) {
-                /**
-                 * Sleeping state: 
-                 * check, in decreasing priority if:
-                 *  - it's time to measure
-                 *  - it's time to send message
-                 * if not, start a new sleep cycle
-                 */
-            case SLEEPING:
-                // transitions
-                if (batSleepCount >= batSleepThreshold) {
-                    fsmState = MEASURE;
-                }
-                else if (commSleepCount >= commSleepThreshold) {
+            /** Idle state: 
+             * Go to Idle mode to minimize power consumption.
+             * Timer1 interrupt gets us out of IDLE (and turns the LED on to
+             * refresh the power pack.
+             * After 500ms, turn the LED off, then
+             * check if it's time to send message */
+            case IDLE:
+                Idle(); 
+                __delay_ms(500);
+                LED_OFF();
+                if (isrCommSleepCount > commSleepThreshold) {
+                    isrCommSleepCount = 0;  // no need for a critical section (atomic operation)
                     fsmState = ESTABLISHCONNECTION;
-                }
-                else {
-                    // actions
-                    Sleep();
-                    batSleepCount++;
-                    commSleepCount++;
-                }
-                break;
-
-            case MEASURE:
-                batGaugeFunction(batSleepCount);
-                batSleepCount = 0;
-                if (commSleepCount >= commSleepThreshold) {
-                    fsmState = ESTABLISHCONNECTION;
-                }
-                else {
-                    fsmState = SLEEPING;
                 }
                 break;
 
@@ -197,7 +171,13 @@ int main(void) {
                 break;
 
             case SENDING:
-                tsError = tsPublish(publishTopic, caseId, energyIn, energyOut, gpsCoord, workMode, batSleepThreshold*SLEEP_PERIOD_SEC, COMM_PERIOD_H, temperature);
+                _T1IE = 0;
+                chargeEnergy = isrChargeEnergy;
+                isrChargeEnergy = 0;
+                loadEnergy = isrLoadEnergy;
+                isrLoadEnergy = 0;
+                _T1IE = 1;
+                tsError = tsPublish(publishTopic, caseId, chargeEnergy, loadEnergy, gpsCoord, workMode, TIMER1_PERIOD_S, COMM_PERIOD_H, temperature);
 
                 if (tsError == NO_ERROR) {
                     fsmState = DESTROY_CONNECTION;
@@ -213,43 +193,30 @@ int main(void) {
                 //tsError = tsDisconnect();
                 tsError = tsDestroy();
                 THINGSTREAM_UART_DISABLE(); // SWITCHING OF THE UART CHANNEL
-                THINGSTREAM_POWER_DOWN(); // SWITCHING OFF THE COMMUNICATION MODULE
-                bool_alert_percentage = 0;
-                commSleepCount = 0;
-                fsmState = SLEEPING;
+                THINGSTREAM_POWER_DOWN();   // SWITCHING OFF THE COMMUNICATION MODULE
+                fsmState = IDLE;
                 break;
 
             case GPS_INIT:
                 tsError = tsGNSSpowerOn();
                 if (tsError == NO_ERROR) {
+                    gpsCount = 0;
                     fsmState = GPS_READ;
                 } else {
                     strcpy(gpsCoord.longitude, errStr);
                     strcpy(gpsCoord.latitude, errStr);
                     fsmState = SENDING;
                 }
-                gpsTry = 0;
-                Sleep();
-                batSleepCount++;
-                commSleepCount++;
                 break;
                 
-                
-            /* GPSACQUISITION state: recovery of the GPS coordinates (latitude and longitude)*/
             case GPS_READ:
-                if (gpsTry++ < 1) {
+                Idle();
+                if (gpsCount++ < GPS_MAX_TRY) {
                     if (tsGNSSCmd(&gpsCoord) == NO_ERROR) {
                         // tsGNSSpowerOff();    // creates an "unespected error" from the click board
                         fsmState = SENDING;
-                    } else {
-                        Sleep();
-                        batGaugeFunction(batSleepCount);
-                        batSleepCount = 0;
-                        commSleepCount++;
                     }
-                }
-                else {
-                    //tsGNSSpowerOff(); generates an error from the click board
+                } else {
                     fsmState = SENDING;
                 }
                 break;
@@ -258,48 +225,6 @@ int main(void) {
     return (0);
 }
 
-
-#define LOAD_GAIN       (51*0.033)  // La résistance de mesure vaut 33mOhm et l'amplificatuer différentiel a un gain de 51
-#define CHARGE_GAIN     (15*0.033)  // La résistance de mesure vaut 33mOhm et l'amplificatuer différentiel a un gain de 15
-#define CHARGE_CHANNEL  0           // la mesure de Iload se fait sur AN0
-#define LOAD_CHANNEL    1           // la mesure de Iload se fait sur AN1
-
-void batGaugeFunction(uint16_t batSleepCount) {
-    float loadCurrent;
-    float chargeCurrent;
-    float loadVoltage = 5;
-    float chargeVoltage = 7.2;
-    
-    // Mesure de Iload
-    adcStart(LOAD_CHANNEL);
-    //Waiting for the conversion to be done
-    while (!adcConversionDone());
-    // Reading
-    loadCurrent = LOAD_GAIN * (3.3/1023) * adcRead();
-
-    // SMesrue de Icharge
-    adcStart(CHARGE_CHANNEL);
-    //Waiting for the conversion to be done
-    while (!adcConversionDone());
-    chargeCurrent = CHARGE_GAIN * (3.3/1023) * adcRead();
-
-    // Computing the percentage
-    // La tension de charge est 7V, on applique donc un facteur 7V/5V au courant de charge
-    gauge = gauge + (chargeCurrent*3.5 - loadCurrent) * (batSleepCount * SLEEP_PERIOD_SEC) / 3.6;
-    last_percentage = energyIn;
-    
-    energyIn += chargeVoltage * chargeCurrent * batSleepCount * SLEEP_PERIOD_SEC;
-    energyOut += loadVoltage * loadCurrent * batSleepCount * SLEEP_PERIOD_SEC;
-}
-
-/* Wait function (in seconds) */
-void delaySec(int time) { //time in seconds
-    uint16_t limit = time * 10;
-    uint16_t count = 0;
-    for (count = 0; count < limit; ++count) {
-        __delay_ms(100);
-    }
-}
 
 /* Used to write a string into a char array*/
 void write_string(char *dest, char text[]) {
@@ -333,7 +258,7 @@ int getSubString(char *source, char *target, int from, int to) {
     return 0;
 }
 */
-
+/*
 // Used to extract the relevant data (mode, interval_bat_s, interval_sending_h) from the message received from the web 
 void extract_relevant_data(char* relevant_data) {
     //int table[3];
@@ -394,6 +319,8 @@ void extract_relevant_data(char* relevant_data) {
 
 // Used to sp
 void extract_data_msg(char message_received[]) {
+    #define MSG_RECEIVED_LENGTH 50
+    char receivedMsg[MSG_RECEIVED_LENGTH];
     char ch = 34; //character ' " '
     int i = 0;
     int ind = 0;
@@ -418,3 +345,4 @@ void extract_data_msg(char message_received[]) {
 
     extract_relevant_data(relevant_info);
 }
+*/

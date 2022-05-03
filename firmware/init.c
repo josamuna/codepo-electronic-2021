@@ -18,7 +18,7 @@
 #pragma config GSS = OFF                // General Segment Code Protection (User program memory is not code-protected)
 
 // FOSCSEL
-#pragma config FNOSC = FRC              // Oscillator Mode (Internal Fast RC (FRC))
+#pragma config FNOSC = FRCDIV16         // Oscillator Mode (Internal Fast RC (FRC) divide by 16)
 #pragma config IESO = OFF               // ###### Internal External Switch Over Mode (Start-up device with user-selected oscillator source)
 
 // FOSC
@@ -28,12 +28,11 @@
 #pragma config IOL1WAY = ON             // Peripheral Pin Select Configuration (Allow Only One Re-configuration)
 #pragma config FCKSM = CSDCMD           // Clock Switching and Monitor (Both Clock Switching and Fail-Safe Clock Monitor are disabled)
 
-// FWDT
-#pragma config WDTPOST = PS32768        // Watchdog Timer Postscaler (1:32,768)
+// FWDT : T = 4096ms
+#pragma config WDTPOST = PS1024         // Watchdog Timer Postscaler (1:1024)
 #pragma config WDTPRE = PR128           // WDT Prescaler (1:128)
 #pragma config WINDIS = OFF             // Watchdog Timer Window (Watchdog Timer in Non-Window mode)
 #pragma config FWDTEN = ON              // ##### Watchdog Timer Enable (Watchdog timer always enabled)
-// #pragma config FWDTEN = OFF 
 
 // FPOR
 #pragma config FPWRT = PWR128           // POR Timer Value (128ms)
